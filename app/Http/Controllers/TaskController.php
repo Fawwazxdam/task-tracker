@@ -357,6 +357,98 @@ class TaskController extends Controller
     }
 
     /**
+     * Get backlog tasks for a project
+     */
+    public function backlog($projectId)
+    {
+        try {
+            $project = Project::where('uuid', $projectId)
+                ->where(function ($query) {
+                    $query->where('owner_id', Auth::id())
+                        ->orWhereHas('tasks', function ($q) {
+                            $q->where('user_id', Auth::id());
+                        });
+                })
+                ->firstOrFail();
+
+            $backlogTasks = $project->tasks()
+                ->where('status', 'backlog')
+                ->with('assignee')
+                ->orderByRaw("FIELD(priority, 'critical', 'high', 'medium', 'low')")
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $backlogTasks,
+                'project' => $project->only(['id', 'name'])
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch backlog',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Add a task to backlog
+     */
+    public function addToBacklog(Request $request, $projectId)
+    {
+        try {
+            $project = Project::where('uuid', $projectId)
+                ->where(function ($query) {
+                    $query->where('owner_id', Auth::id())
+                        ->orWhereHas('tasks', function ($q) {
+                            $q->where('user_id', Auth::id());
+                        });
+                })
+                ->firstOrFail();
+
+            $validator = Validator::make($request->all(), [
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'type' => 'required|in:feature,bug,chore,enhancement',
+                'priority' => 'required|in:low,medium,high,critical',
+                'story_points' => 'nullable|integer|min:1|max:20',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $task = Task::create([
+                'uuid' => Uuid::uuid4()->toString(),
+                'project_id' => $project->id,
+                'user_id' => Auth::id(),
+                'title' => $request->title,
+                'description' => $request->description,
+                'type' => $request->type,
+                'status' => 'backlog',
+                'priority' => $request->priority,
+                'story_points' => $request->story_points,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $task->load('assignee'),
+                'message' => 'Task added to backlog successfully'
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to add task to backlog',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Search tasks
      */
     public function search(Request $request, $projectId)

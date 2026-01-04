@@ -12,8 +12,8 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::middleware('auth:sanctum')->group(function () {
     // Project routes
     Route::apiResource('projects', \App\Http\Controllers\ProjectController::class);
-    Route::get('projects/{projectId}/backlog', [\App\Http\Controllers\ProjectController::class, 'backlog']);
-    Route::post('projects/{projectId}/backlog', [\App\Http\Controllers\ProjectController::class, 'addToBacklog']);
+    Route::get('projects/{projectId}/backlog', [\App\Http\Controllers\TaskController::class, 'backlog']);
+    Route::post('projects/{projectId}/backlog', [\App\Http\Controllers\TaskController::class, 'addToBacklog']);
     Route::get('projects/{projectId}/stats', [\App\Http\Controllers\ProjectController::class, 'stats']);
 
     // Task routes nested under projects
