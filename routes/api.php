@@ -4,6 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\UserPreferenceController;
+use App\Http\Controllers\DashboardController;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
@@ -33,4 +35,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('user', function (Request $request) {
         return $request->user();
     });
+
+    // User Preferences routes
+    Route::prefix('user/preferences')->group(function () {
+        Route::get('/', [UserPreferenceController::class, 'index']);
+        Route::post('/', [UserPreferenceController::class, 'store']);
+        Route::get('/{key}', [UserPreferenceController::class, 'show']);
+        Route::put('/{key}', [UserPreferenceController::class, 'update']);
+        Route::delete('/{key}', [UserPreferenceController::class, 'destroy']);
+    });
+
+    // Dashboard routes
+    Route::get('dashboard/stats', [DashboardController::class, 'stats']);
+    Route::get('dashboard/recent-tasks', [DashboardController::class, 'recentTasks']);
 });
