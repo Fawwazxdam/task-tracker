@@ -342,4 +342,89 @@ class ProjectController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Add members to a project
+     */
+    public function addMembers(Request $request, $projectId)
+    {
+        try {
+            $project = Project::where('uuid', $projectId)
+                ->where(function ($query) {
+                    $query->where('owner_id', Auth::id())
+                        ->orWhereHas('members', function ($q) {
+                            $q->where('user_id', Auth::id())
+                              ->whereIn('role', ['owner', 'admin']);
+                        });
+                })
+                ->firstOrFail();
+
+            $validator = Validator::make($request->all(), [
+                'user_ids' => 'required|array',
+                'user_ids.*' => 'exists:users,id',
+                'role' => 'sometimes|string|in:member,admin'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $role = $request->role ?? 'member';
+            $userIds = $request->user_ids;
+
+            foreach ($userIds as $userId) {
+                $project->members()->syncWithoutDetaching([
+                    $userId => ['role' => $role]
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Members added successfully',
+                'data' => $project->members
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to add members',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get project members
+     */
+    public function members($projectId)
+    {
+        try {
+            $project = Project::where('uuid', $projectId)
+                ->where(function ($query) {
+                    $query->where('owner_id', Auth::id())
+                        ->orWhereHas('members', function ($q) {
+                            $q->where('user_id', Auth::id());
+                        })
+                        ->orWhereHas('tasks', function ($q) {
+                            $q->where('user_id', Auth::id());
+                        });
+                })
+                ->firstOrFail();
+
+            $members = $project->members()->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $members
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch members',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
