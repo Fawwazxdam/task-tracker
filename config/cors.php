@@ -25,6 +25,7 @@ return [
         'http://localhost:3100',
         'http://127.0.0.1:3100',
         'https://merakit-psi.vercel.app',
+        'https://meraakit.vercel.app',
     ],
 
     'allowed_origins_patterns' => [],
